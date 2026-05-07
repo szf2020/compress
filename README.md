@@ -1,8 +1,8 @@
 # Compress
 
-**Shrink your videos. Nothing uploaded. Ever.**
+**Shrink your video. FFmpeg runs in your browser, compresses it locally, hands it back.**
 
-A video compression PWA that runs entirely in your browser using FFmpeg compiled to WebAssembly. No servers, no uploads, no accounts, no ads.
+A video compression PWA built on FFmpeg compiled to WebAssembly. The compression itself happens in your browser — no upload, no server-side encoding. The ~31 MB FFmpeg engine downloads once on first visit, then it's cached and works offline.
 
 <p align="center">
   <img src="screenshot.png" alt="Compress app screenshot" width="320">
@@ -14,42 +14,68 @@ A video compression PWA that runs entirely in your browser using FFmpeg compiled
 
 ---
 
-## How it works
+## What it does
 
-1. Pick a video from your device
-2. Choose a quality preset (High / Medium / Low / Under 10 MB)
-3. FFmpeg.wasm compresses it right in your browser
-4. Save or share the result
+| | |
+|---|---|
+| **Compress** | H.264 / AAC encoding via libx264 (`ultrafast` preset). Output is a standard `.mp4`. |
+| **Trim** | Cut a clip to a start/end range before encoding. Stream copy when possible (fast, no quality loss). |
+| **Audio-only** | Strip the video, save the audio as MP3 (128 kbps). Useful for podcasts, voice memos. |
+| **Paste a link** | Drop in a TikTok / YouTube / Instagram / X (Twitter) URL. Server fetches with yt-dlp, browser handles compression. |
+| **Share for 24h** | Optionally save the result to a temporary share URL. Auto-previews in iMessage / Discord / Slack via OG tags. Expires after 24 hours. |
+| **Resume** | If you navigate away mid-session, the loaded video is held in memory — `Continue` button reopens it. |
 
-The ~31 MB FFmpeg engine downloads once and gets cached by the service worker. After that, compression works offline.
+## Quality presets
 
-## Features
+The presets target different codec settings via FFmpeg's CRF (constant rate factor) mode. Lower CRF = higher quality + larger file:
 
-- **100% on-device** — your video never leaves your phone or computer
-- **Installable PWA** — add to home screen for a native app experience
-- **Quality presets** — High (CRF 23), Medium (CRF 28), Low (CRF 35), or target file size
-- **File size estimation** — quick heuristic + sample-based test encoding
-- **Detailed stats** — input/output bitrate, compression ratio, codec info, encoding speed
-- **Background compression** — wake lock keeps the device awake, notification when done
-- **Offline support** — service worker caches everything after first load
+| Preset | CRF | Scale | x264 preset | Typical size reduction |
+|---|---|---|---|---|
+| **High** | 23 | original | ultrafast | ~40–60% |
+| **Medium** | 30 | 720p max | ultrafast | ~70–85% |
+| **Low** | 34 | 480p max | ultrafast | ~85–95% |
+| **&lt; 10 MB** | (computed) | adaptive | ultrafast | targets 9.5 MB |
 
-## Privacy & Security
+The `< 10 MB` preset runs a sample encode on a short slice, projects the bitrate needed to hit 9.5 MB, then encodes the full clip. It's slower but more accurate than a fixed CRF for size-targeted output (Discord 10 MB limit, etc.).
 
-- Zero network requests during compression — all processing is local WebAssembly
-- No analytics, no tracking, no cookies (except the service worker cache)
-- No authentication, no user data stored
-- Source code is fully auditable in this repo
+## Privacy model
+
+Be specific about what hits the network and what doesn't:
+
+| Action | Network? |
+|---|---|
+| Upload a file from your device | **No.** The video is read into memory and processed by FFmpeg.wasm in the page. Zero bytes leave the browser. |
+| Paste a link | **Yes.** A small backend (yt-dlp on `mat`) downloads the video and serves it back to the browser. The browser then compresses locally. The server keeps the file ~5 minutes. |
+| Click "Share" on a result | **Yes.** Uploads the compressed output to a 24-hour share URL with OG-tagged thumbnail. Optional — never automatic. |
+| Idle on the page | **No.** No analytics, no tracking, no telemetry, no cookies (only the service-worker cache). |
+
+The FFmpeg `.wasm` bundle is the only resource pulled at first load; after that the service worker serves it cache-first.
+
+## Browser support
+
+- **Chrome / Edge** (desktop and mobile): full support
+- **Firefox** (desktop): full support
+- **Safari** (15+ desktop, 16+ iOS): full support, slower encode (no SIMD threading)
+- **In-app browsers** (Instagram, TikTok webview, etc.): often missing `SharedArrayBuffer` — falls back to single-threaded mode (still works, just slower)
+
+The WASM build requires `SharedArrayBuffer`, which means the page is served with COOP/COEP headers (`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`).
+
+## Performance notes
+
+- Encoding speed is roughly **0.5–2× realtime** on modern phones, **2–5× realtime** on laptops, depending on input resolution and the preset. The `ultrafast` x264 preset trades 10–15% efficiency for a 3–5× speedup over `medium` — this matters a lot in WebAssembly without SIMD.
+- A wake lock keeps the device awake during long encodes. The app fires a notification when done if you've granted permission.
+- Memory ceiling is the WASM 4 GB limit. Practical max input is ~1.5 GB for a 1080p source; bigger clips will fail with an out-of-memory.
 
 ## Tech stack
 
 | Component | Technology |
-|-----------|-----------|
-| Compression | [FFmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) (v0.12) — H.264 via libx264 |
+|---|---|
+| Compression | [FFmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) v0.12 — H.264 via libx264 |
+| URL fetch | [yt-dlp](https://github.com/yt-dlp/yt-dlp) (separate service, runs server-side) |
 | Frontend | Vanilla JS, no frameworks, no build step |
-| Styling | Custom CSS with CSS variables |
-| Font | [Space Grotesk](https://fonts.google.com/specimen/Space+Grotesk) |
-| PWA | Service worker + web app manifest |
-| Hosting | Static files behind Caddy |
+| Styling | Custom CSS — DM Serif Display + Space Mono + Space Grotesk |
+| PWA | Service worker (cache-first for WASM, network-first for HTML/JS) |
+| Hosting | Static files behind Caddy at [compress.applesauce.chat](https://compress.applesauce.chat) |
 
 ## Run locally
 
@@ -69,13 +95,16 @@ curl -o lib/ffmpeg-core.js "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpe
 curl -o lib/ffmpeg-core.wasm "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm"
 ```
 
-Serve with any static file server:
+Serve with COOP/COEP headers (required for `SharedArrayBuffer`):
 
 ```bash
-python3 -m http.server 8000
+# Use any server that can set the headers, e.g. with Caddy:
+caddy file-server --listen :8000 --root . \
+  --header "Cross-Origin-Opener-Policy: same-origin" \
+  --header "Cross-Origin-Embedder-Policy: require-corp"
 ```
 
-Open `http://localhost:8000` in your browser.
+Or for quick local testing without URL paste / share features, vanilla `python3 -m http.server` works for file uploads (browser will fall back to single-threaded mode).
 
 ## License
 

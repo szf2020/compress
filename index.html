@@ -7,13 +7,25 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#FAF8F5">
     <meta name="description" content="Compress videos instantly on your device. No uploads, no servers.">
-    <title>Compress</title>
+    <title>Compress — shrink videos without uploading them</title>
+    <meta property="og:title" content="Compress — shrink videos without uploading them">
+    <meta property="og:description" content="Compress videos right in your browser using FFmpeg.wasm. Nothing is uploaded. 100% on-device.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://compress.applesauce.chat/">
+    <meta property="og:site_name" content="compress.applesauce.chat">
+    <meta property="og:image" content="https://compress.applesauce.chat/screenshot.png">
+    <meta property="og:image:type" content="image/png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Compress — shrink videos without uploading them">
+    <meta name="twitter:description" content="Compress videos right in your browser using FFmpeg.wasm. Nothing is uploaded. 100% on-device.">
+    <meta name="twitter:image" content="https://compress.applesauce.chat/screenshot.png">
+    <link rel="canonical" href="https://compress.applesauce.chat/">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23F97316'/><path d='M30 32L50 48L70 32M30 68L50 52L70 68M35 50H65' stroke='white' stroke-width='7' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -22,9 +34,9 @@
         <div id="screen-select" class="screen active" data-screen="0">
             <div class="screen-inner">
                 <div class="select-top">
-                    <span class="badge">100% on-device</span>
+                    <div class="eyebrow"><span class="eyebrow-num">001</span><span class="eyebrow-label">on-device video tool</span></div>
                     <h1>Shrink<br>your video.</h1>
-                    <p class="tagline">Compress locally. Nothing uploaded. Ever.</p>
+                    <p class="tagline">Drop a clip. <em>FFmpeg</em> runs in your browser, compresses it locally, hands it back. Nothing uploads — ever.</p>
                 </div>
 
                 <label class="file-picker" id="dropZone">
@@ -41,6 +53,65 @@
                         <span class="picker-sub">or drop it here</span>
                     </div>
                 </label>
+
+                <!-- URL download -->
+                <div class="url-section">
+                    <div class="url-divider"><span>or paste a link</span></div>
+                    <div class="url-input-wrap">
+                        <input type="url" id="urlInput" class="url-input" placeholder="https://youtube.com/watch?v=..." autocomplete="off" autocapitalize="off" spellcheck="false">
+                        <button class="url-go-btn" id="urlGoBtn">
+                            <svg viewBox="0 0 20 20" fill="none"><path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                    </div>
+                    <div class="url-status hidden" id="urlStatus">
+                        <div class="url-status-dot"></div>
+                        <span id="urlStatusText">Fetching video...</span>
+                    </div>
+                    <div class="url-actions hidden" id="urlActions">
+                        <div class="url-actions-grid">
+                            <button class="url-action save" id="urlSaveBtn">
+                                <svg viewBox="0 0 20 20" fill="none"><path d="M17 12.5v3.333A1.667 1.667 0 0115.333 17.5H4.667A1.667 1.667 0 013 15.833V12.5M6.667 8.333L10 11.667l3.333-3.334M10 11.667V2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <span>Save video</span>
+                            </button>
+                            <button class="url-action share" id="urlShareBtn">
+                                <svg viewBox="0 0 20 20" fill="none"><path d="M8.5 11.5a3 3 0 010-4.243l2.121-2.121a3 3 0 014.243 4.243l-1 1M11.5 8.5a3 3 0 010 4.243l-2.121 2.121a3 3 0 01-4.243-4.243l1-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <span id="urlShareLabel">Share link</span>
+                            </button>
+                            <button class="url-action compress" id="urlCompressBtn">
+                                <svg viewBox="0 0 20 20" fill="none"><path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <span>Compress</span>
+                            </button>
+                            <button class="url-action edit" id="urlEditBtn">
+                                <svg viewBox="0 0 20 20" fill="none"><path d="M3 17h4l10-10a2.828 2.828 0 00-4-4L3 13v4zM11 5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <span>Trim</span>
+                            </button>
+                            <button class="url-action audio url-action-wide" id="urlAudioBtn">
+                                <svg viewBox="0 0 20 20" fill="none"><path d="M8 15V5l9-2v10M8 15a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zm9-2a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <span>Audio only</span>
+                            </button>
+                        </div>
+                        <p class="url-share-hint" id="urlShareHint">Share links live for 24 hours, then expire.</p>
+                    </div>
+                </div>
+
+                <section class="specs" id="homeFeatures" aria-label="Technical capabilities">
+                    <div class="spec-row">
+                        <span class="spec-key">runs</span>
+                        <span class="spec-val">FFmpeg.wasm 0.12 — H.264 / AAC, x264 ultrafast preset</span>
+                    </div>
+                    <div class="spec-row">
+                        <span class="spec-key">does</span>
+                        <span class="spec-val">compress &middot; trim &middot; audio-only MP3 &middot; paste-from-link</span>
+                    </div>
+                    <div class="spec-row">
+                        <span class="spec-key">share</span>
+                        <span class="spec-val">links live 24h with iMessage / Discord previews</span>
+                    </div>
+                    <div class="spec-row">
+                        <span class="spec-key">data</span>
+                        <span class="spec-val">0 bytes uploaded. service-worker cache, that's it.</span>
+                    </div>
+                </section>
 
                 <button class="about-link" id="aboutBtn">About this app</button>
             </div>
@@ -163,6 +234,10 @@
                 <button class="btn-primary" id="compressBtn">
                     <span>Compress</span>
                     <svg viewBox="0 0 20 20" fill="none"><path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <button class="btn-ghost" id="editBtn">
+                    <svg viewBox="0 0 20 20" fill="none" class="btn-ico"><path d="M3 17h4l10-10a2.828 2.828 0 00-4-4L3 13v4zM11 5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Trim &amp; Split
                 </button>
             </div>
         </div>
@@ -315,7 +390,91 @@
                     <span>Save Video</span>
                 </button>
                 <button class="btn-ghost" id="shareBtn">Share</button>
+                <button class="btn-ghost" id="shareLinkBtn">
+                    <svg viewBox="0 0 20 20" fill="none" class="btn-ico" aria-hidden="true"><path d="M8.5 11.5a3 3 0 010-4.243l2.121-2.121a3 3 0 014.243 4.243l-1 1M11.5 8.5a3 3 0 010 4.243l-2.121 2.121a3 3 0 01-4.243-4.243l1-1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span id="shareLinkLabel">Copy share link</span>
+                </button>
+                <p class="share-hint" id="shareHint">Links work for 24 hours, then expire.</p>
                 <button class="btn-text" id="anotherBtn">Compress another</button>
+            </div>
+        </div>
+
+        <!-- Screen 6: Edit / Trim -->
+        <div id="screen-edit" class="screen" data-screen="5">
+            <div class="screen-nav">
+                <button class="nav-back" id="editBack">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <span class="nav-title">Edit</span>
+                <div class="nav-spacer"></div>
+            </div>
+
+            <div class="edit-body">
+                <!-- Video preview -->
+                <div class="edit-preview-wrap">
+                    <video id="editPreview" playsinline></video>
+                    <div class="edit-time-display">
+                        <span id="editCurrentTime">0:00</span>
+                        <span class="edit-time-sep">/</span>
+                        <span id="editTotalTime">0:00</span>
+                    </div>
+                </div>
+
+                <!-- Playback controls -->
+                <div class="edit-controls">
+                    <button class="edit-ctrl-btn" id="editPlayBtn">
+                        <svg id="editPlayIcon" viewBox="0 0 24 24" fill="none"><path d="M6 4l14 8-14 8V4z" fill="currentColor"/></svg>
+                        <svg id="editPauseIcon" viewBox="0 0 24 24" fill="none" class="hidden"><rect x="5" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="15" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg>
+                    </button>
+                </div>
+
+                <!-- Timeline -->
+                <div class="timeline-container">
+                    <div class="timeline-zoom-bar">
+                        <button class="zoom-btn" id="zoomOutBtn">
+                            <svg viewBox="0 0 20 20" fill="none"><path d="M5 10h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        </button>
+                        <div class="zoom-track" id="zoomTrack">
+                            <div class="zoom-fill" id="zoomFill"></div>
+                        </div>
+                        <button class="zoom-btn" id="zoomInBtn">
+                            <svg viewBox="0 0 20 20" fill="none"><path d="M10 5v10M5 10h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        </button>
+                        <span class="zoom-label" id="zoomLabel">1x</span>
+                    </div>
+                    <div class="timeline-scroll" id="timelineScroll">
+                        <div class="timeline-track" id="timelineTrack">
+                            <canvas id="timelineThumbs" height="56"></canvas>
+                            <div class="timeline-segments" id="timelineSegments"></div>
+                            <div class="timeline-playhead" id="timelinePlayhead"></div>
+                        </div>
+                    </div>
+                    <div class="timeline-ruler" id="timelineRuler"></div>
+                </div>
+
+                <!-- Segment list -->
+                <div class="segment-list" id="segmentList"></div>
+            </div>
+
+            <div class="screen-bottom edit-bottom">
+                <div class="edit-actions">
+                    <button class="edit-action-btn" id="editSplitBtn">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                        <span>Split</span>
+                    </button>
+                    <button class="edit-action-btn danger" id="editDeleteBtn" disabled>
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <span>Delete</span>
+                    </button>
+                    <button class="edit-action-btn" id="editUndoBtn" disabled>
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M3 10h13a4 4 0 010 8H9M3 10l4-4M3 10l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <span>Undo</span>
+                    </button>
+                </div>
+                <button class="btn-primary" id="editExportBtn">
+                    <span>Export</span>
+                    <svg viewBox="0 0 20 20" fill="none"><path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
             </div>
         </div>
 
@@ -331,18 +490,31 @@
 
             <div class="screen-inner scroll-y">
                 <div class="about-content">
-                    <h2>No ads. No tracking.<br>No cloud.</h2>
+                    <h2>No ads. No tracking.<br>No accounts.</h2>
 
-                    <p>Your video never leaves your device. We compress it right here, in your browser, using FFmpeg compiled to WebAssembly.</p>
+                    <p>Compression runs in your browser. The video never leaves your device unless <em>you</em> choose to share it.</p>
 
-                    <p>Why? Because compression is solved. FFmpeg has been doing this for 25 years. There's no reason to upload your private videos to some server, wait in a queue, and download a watermarked result.</p>
+                    <p>Why? Compression is solved. FFmpeg has been doing this for 25 years. There's no reason to upload your private clips to some server, wait in a queue, and download a watermarked result.</p>
+
+                    <div class="about-divider"></div>
+
+                    <h3>What you can do</h3>
+                    <ul class="about-checklist">
+                        <li><strong>Compress videos</strong> right in your browser — High / Medium / Low / target-size presets.</li>
+                        <li><strong>Paste a link</strong> from TikTok, YouTube, Instagram, X — we fetch the file for you.</li>
+                        <li><strong>Extract audio</strong> from any clip as MP3.</li>
+                        <li><strong>Trim &amp; split</strong> a video down to just the part you want.</li>
+                        <li><strong>Share for 24 hours</strong> with an auto-previewing link that embeds in iMessage, Discord, and Slack with a thumbnail and inline player.</li>
+                    </ul>
 
                     <div class="about-divider"></div>
 
                     <h3>How it works</h3>
                     <p>FFmpeg.wasm runs entirely in your browser. The ~30 MB engine downloads once and gets cached. After that, compression works offline.</p>
 
-                    <p>No account. No login. No "premium tier." No "3 free conversions." Just pick a video and compress it.</p>
+                    <p>The link-download &amp; share features run on a small server because browsers can't fetch files from third-party sites. Files dropped into the share bucket auto-delete after 24 hours — no permanent storage, no accounts.</p>
+
+                    <p>No login. No "premium tier." No "3 free conversions." Just pick a video and go.</p>
 
                     <div class="about-divider"></div>
 
