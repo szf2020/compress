@@ -2,3 +2,6 @@
 .claude*
 CLAUDE.md
 lib/
+__pycache__/
+*.pyc
+*.bak.*
