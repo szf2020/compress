@@ -52,6 +52,10 @@
                 {
                     "name": "video",
                     "accept": ["video/*"]
+                },
+                {
+                    "name": "image",
+                    "accept": ["image/*"]
                 }
             ]
         }

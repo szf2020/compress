@@ -1,4 +1,5 @@
-const CACHE_NAME = 'compress-v22';
+const CACHE_NAME = 'compress-v23';
+const SHARE_PROBE_CACHE = 'share-probe-v1';
 
 // Large files that rarely change — cache-first (avoid re-downloading 31MB WASM)
 const CACHE_FIRST = [
@@ -32,12 +33,14 @@ self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
 
-// Activate: clean old caches
+// Activate: clean old caches (but keep the share-probe stash so an in-flight
+// share-target handoff survives an SW update mid-flight)
 self.addEventListener('activate', (event) => {
+    const KEEP = new Set([CACHE_NAME, SHARE_PROBE_CACHE]);
     event.waitUntil(
         caches.keys().then((keys) =>
             Promise.all(
-                keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
+                keys.filter((k) => !KEEP.has(k)).map((k) => caches.delete(k))
             )
         )
     );
@@ -49,19 +52,57 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     if (url.origin !== self.location.origin) return;
 
-    // Handle share target: POST to / with shared video file
+    // Handle share target: POST to / with shared video/image file
     if (event.request.method === 'POST' && url.pathname === '/') {
         event.respondWith(
             (async () => {
                 const formData = await event.request.formData();
-                const file = formData.get('video');
-                // Store shared file for the client to pick up
+                const videoFile = formData.get('video');
+                const imageFile = formData.get('image');
+
+                // Image branch: stash in cache, redirect to probe page
+                // (probe phase — we want to inspect what Google Photos actually
+                // hands us before committing to the wasm-vips pipeline)
+                if (imageFile && imageFile.size > 0) {
+                    const id = (self.crypto && self.crypto.randomUUID)
+                        ? self.crypto.randomUUID().replace(/-/g, '').slice(0, 16)
+                        : Math.random().toString(36).slice(2, 18);
+                    const cache = await caches.open(SHARE_PROBE_CACHE);
+                    const headers = new Headers({
+                        'Content-Type': imageFile.type || 'application/octet-stream',
+                        'X-Original-Name': encodeURIComponent(imageFile.name || ''),
+                        'X-Original-Type': imageFile.type || '',
+                        'X-Original-Size': String(imageFile.size),
+                        'X-Original-LastModified': String(imageFile.lastModified || 0),
+                        'X-Form-Field': 'image',
+                        'X-Captured-At': String(Date.now()),
+                    });
+                    await cache.put(
+                        new Request('/__share-probe/' + id),
+                        new Response(imageFile, { headers })
+                    );
+                    return Response.redirect('/photos-probe/?id=' + id, 303);
+                }
+
+                // Video branch: existing behaviour (postMessage to client)
                 const client = await self.clients.get(event.resultingClientId);
-                if (client && file) {
-                    client.postMessage({ type: 'shared-video', file });
+                if (client && videoFile) {
+                    client.postMessage({ type: 'shared-video', file: videoFile });
                 }
                 return Response.redirect('/', 303);
             })()
+        );
+        return;
+    }
+
+    // Serve stashed probe payload (only fetchable via /__share-probe/<id>)
+    if (url.pathname.startsWith('/__share-probe/')) {
+        event.respondWith(
+            caches.open(SHARE_PROBE_CACHE).then((cache) =>
+                cache.match(event.request).then((r) =>
+                    r || new Response('Not found', { status: 404 })
+                )
+            )
         );
         return;
     }
