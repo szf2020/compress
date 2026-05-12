@@ -1,4 +1,4 @@
-const CACHE_NAME = 'compress-v6';
+const CACHE_NAME = 'compress-v22';
 
 // Large files that rarely change — cache-first (avoid re-downloading 31MB WASM)
 const CACHE_FIRST = [
@@ -16,6 +16,10 @@ const NETWORK_FIRST = [
     '/style.css',
     '/app.js',
     '/manifest.json',
+    '/icon-192.png',
+    '/icon-512.png',
+    '/icon-maskable-192.png',
+    '/icon-maskable-512.png',
 ];
 
 // Install: pre-cache everything
@@ -40,10 +44,27 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch: network-first for app files, cache-first for lib files
+// Fetch: handle share target POST, then normal caching
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     if (url.origin !== self.location.origin) return;
+
+    // Handle share target: POST to / with shared video file
+    if (event.request.method === 'POST' && url.pathname === '/') {
+        event.respondWith(
+            (async () => {
+                const formData = await event.request.formData();
+                const file = formData.get('video');
+                // Store shared file for the client to pick up
+                const client = await self.clients.get(event.resultingClientId);
+                if (client && file) {
+                    client.postMessage({ type: 'shared-video', file });
+                }
+                return Response.redirect('/', 303);
+            })()
+        );
+        return;
+    }
 
     const path = url.pathname;
     const isCacheFirst = CACHE_FIRST.some((p) => path === p || path.startsWith('/lib/'));

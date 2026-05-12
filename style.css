@@ -693,6 +693,98 @@ button, label, .quality-pills, .meta-strip, .screen-nav, .badge {
 
 .resume-btn:active { transform: scale(0.94); }
 
+/* Install prompt (mobile PWA) — sibling to resume-card, lives at bottom */
+.install-card {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    bottom: calc(60px + var(--safe-b));
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px 14px 14px;
+    background: var(--surface);
+    border-radius: var(--r);
+    box-shadow: var(--shadow-lg);
+    border: 1.5px solid var(--border-strong);
+    animation: slideUp 0.35s var(--spring);
+    z-index: 5;
+}
+.install-card.hidden { display: none; }
+
+.install-dismiss {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.15s, color 0.15s;
+}
+.install-dismiss:hover { background: var(--surface-dim); color: var(--text); }
+.install-dismiss:active { transform: scale(0.9); }
+.install-dismiss svg { width: 12px; height: 12px; }
+
+.install-icon {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 10px;
+}
+.install-icon svg { width: 22px; height: 22px; }
+
+.install-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding-right: 22px;
+}
+.install-title { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.005em; }
+.install-sub { font-size: 12px; color: var(--text-2); font-weight: 500; line-height: 1.45; }
+
+.install-btn {
+    padding: 9px 18px;
+    border: none;
+    border-radius: var(--r-full);
+    background: var(--text);
+    color: var(--surface);
+    font-size: 13px;
+    font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.18s var(--spring), background 0.15s;
+    white-space: nowrap;
+}
+.install-btn:active { transform: scale(0.94); }
+
+/* iOS variant: no button (no programmatic install), instruction text grows */
+.install-card.ios .install-btn { display: none; }
+.install-card.ios .install-sub { font-size: 12.5px; }
+.install-card.ios .install-icon { background: var(--text); }
+
+/* "Open in browser" variant for in-app webviews */
+.install-card.webview .install-btn { display: none; }
+.install-card.webview .install-icon { background: var(--text-2); }
+
+/* When resume-card is visible too, lift install higher */
+.resume-card:not(.hidden) ~ .install-card { bottom: calc(140px + var(--safe-b)); }
+
 /* ======================================================
    Screen 2 — Options
    ====================================================== */
