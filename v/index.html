@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#FAF8F5">
+    <meta name="robots" content="noindex">
+    <title>Shared video — Compress</title>
+    <!--OG_META-->
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23F97316'/><path d='M30 32L50 48L70 32M30 68L50 52L70 68M35 50H65' stroke='white' stroke-width='7' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #FAF8F5;
+            --surface: #ffffff;
+            --text: #1a1a1a;
+            --text-2: #4a4a4a;
+            --text-3: #8a8a8a;
+            --border: rgba(26, 26, 26, 0.08);
+            --border-strong: rgba(26, 26, 26, 0.15);
+            --accent: #F97316;
+            --accent-soft: rgba(249, 115, 22, 0.08);
+            --success: #10b981;
+            --success-soft: rgba(16, 185, 129, 0.08);
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --r: 14px;
+            --font: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #111117;
+                --surface: rgba(255, 255, 255, 0.04);
+                --text: #f5f5f5;
+                --text-2: #c4c4c4;
+                --text-3: #888;
+                --border: rgba(255, 255, 255, 0.08);
+                --border-strong: rgba(255, 255, 255, 0.15);
+            }
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100dvh; }
+        body {
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+        main {
+            width: 100%;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 16px 16px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+            min-height: 0;
+        }
+        header { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .logo {
+            width: 28px; height: 28px; border-radius: 8px;
+            background: var(--accent); display: grid; place-items: center;
+            color: #fff; font-weight: 700; font-size: 13px;
+        }
+        .brand a { color: var(--text); text-decoration: none; font-weight: 600; font-size: 13px; }
+        .brand .sub { color: var(--text-3); font-size: 11px; }
+        /* Player is the hero — fills the available vertical space, no forced aspect. */
+        .player {
+            flex: 1;
+            min-height: 280px;
+            background: #000;
+            border-radius: var(--r);
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+            box-shadow: var(--shadow-sm);
+        }
+        .player video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+            background: #000;
+        }
+        .player .empty { color: #888; font-size: 14px; padding: 24px; text-align: center; }
+        .meta {
+            display: flex; flex-wrap: wrap; gap: 4px 14px;
+            color: var(--text-3); font-size: 11px;
+            flex-shrink: 0;
+        }
+        .meta strong { color: var(--text-2); font-weight: 500; word-break: break-all; }
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .actions .full { grid-column: 1 / -1; }
+        .btn {
+            appearance: none; -webkit-appearance: none;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 11px 10px;
+            border: 1.5px solid var(--border-strong);
+            border-radius: var(--r);
+            background: var(--surface);
+            color: var(--text-2);
+            font: 600 13px var(--font);
+            cursor: pointer; text-decoration: none;
+            transition: transform 0.18s ease, opacity 0.18s ease;
+            box-shadow: var(--shadow-sm);
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+        .btn.primary { color: var(--success); background: var(--success-soft); border-color: rgba(16, 185, 129, 0.3); }
+        .btn.audio { color: #6366f1; background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.25); }
+        .btn.trim { color: var(--accent); background: var(--accent-soft); border-color: rgba(249, 115, 22, 0.25); }
+        .btn.compress { color: var(--text); }
+        .btn.copy { color: #3b82f6; background: rgba(59, 130, 246, 0.08); border-color: rgba(59, 130, 246, 0.3); }
+        .btn.extend { color: var(--accent); background: var(--accent-soft); border-color: rgba(249, 115, 22, 0.3); }
+        .btn.extend.maxed { color: var(--text-3); background: var(--surface); border-color: var(--border); cursor: not-allowed; }
+        .btn.transcript { color: #8b5cf6; background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.3); }
+        .transcript-panel {
+            margin-top: 4px;
+            padding: 14px;
+            border-radius: var(--r);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            max-height: 40vh;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.55;
+            color: var(--text-2);
+            display: none;
+            flex-shrink: 0;
+        }
+        .transcript-panel.show { display: block; }
+        .transcript-head {
+            display: flex; justify-content: space-between; align-items: baseline;
+            margin-bottom: 10px; gap: 8px;
+        }
+        .transcript-head h3 { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); margin: 0; }
+        .transcript-head .links { display: flex; gap: 10px; }
+        .transcript-head a { font-size: 11px; color: var(--text-3); text-decoration: none; border-bottom: 1px dotted var(--text-3); }
+        .transcript-head a:hover { color: var(--text-2); }
+        .transcript-segments { display: flex; flex-direction: column; gap: 6px; }
+        .transcript-seg {
+            display: grid; grid-template-columns: 52px 1fr; gap: 10px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.12s ease;
+        }
+        .transcript-seg:hover { background: var(--accent-soft); }
+        .transcript-seg time {
+            font-family: 'Space Mono', ui-monospace, monospace;
+            font-size: 11px;
+            color: var(--text-3);
+            font-variant-numeric: tabular-nums;
+            padding-top: 1px;
+        }
+        .transcript-seg p { margin: 0; color: var(--text); }
+        .transcript-status {
+            text-align: center; padding: 14px 8px;
+            color: var(--text-3); font-size: 12px;
+        }
+        .transcript-status .spinner {
+            display: inline-block; width: 12px; height: 12px;
+            border: 1.5px solid var(--border-strong);
+            border-top-color: var(--text-2);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 6px;
+            vertical-align: -2px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hint { margin-top: 4px; color: var(--text-3); font-size: 11px; line-height: 1.4; text-align: center; flex-shrink: 0; }
+        .hint a { color: var(--text-2); text-decoration: underline; }
+        .error { padding: 24px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--border); text-align: center; color: var(--text-2); }
+        .error h2 { font-size: 18px; margin-bottom: 6px; color: var(--text); }
+        .error p { font-size: 13px; color: var(--text-3); }
+        .toast {
+            position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom));
+            transform: translateX(-50%);
+            padding: 10px 16px; background: var(--text); color: var(--bg);
+            border-radius: 999px; font-size: 13px; font-weight: 500;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+        }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <div class="logo">C</div>
+            <div class="brand">
+                <a href="/">compress.applesauce.chat</a>
+                <div class="sub">Shared video — expires in <span id="expiresIn">48h</span></div>
+            </div>
+        </header>
+
+        <div id="content">
+            <div class="player">
+                <div class="empty" id="loading">Loading…</div>
+            </div>
+            <div class="meta" id="meta"></div>
+            <div class="actions" id="actions" hidden>
+                <a class="btn primary full" id="downloadBtn" download>
+                    <svg viewBox="0 0 20 20" fill="none"><path d="M17 12.5v3.333A1.667 1.667 0 0115.333 17.5H4.667A1.667 1.667 0 013 15.833V12.5M6.667 8.333L10 11.667l3.333-3.334M10 11.667V2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Download video
+                </a>
+                <a class="btn audio" id="audioBtn" download>
+                    <svg viewBox="0 0 20 20" fill="none"><path d="M8 15V5l9-2v10M8 15a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zm9-2a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Audio (mp3)
+                </a>
+                <a class="btn trim" id="trimBtn">
+                    <svg viewBox="0 0 20 20" fill="none"><path d="M3 17h4l10-10a2.828 2.828 0 00-4-4L3 13v4zM11 5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Trim
+                </a>
+                <a class="btn compress" id="compressBtn">
+                    <svg viewBox="0 0 20 20" fill="none"><path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Compress
+                </a>
+                <button class="btn copy" id="copyBtn">
+                    <svg viewBox="0 0 20 20" fill="none"><path d="M8.5 11.5a3 3 0 010-4.243l2.121-2.121a3 3 0 014.243 4.243l-1 1M11.5 8.5a3 3 0 010 4.243l-2.121 2.121a3 3 0 01-4.243-4.243l1-1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span id="copyLabel">Copy link</span>
+                </button>
+                <button class="btn extend" id="extendBtn" disabled>
+                    <svg viewBox="0 0 20 20" fill="none"><path d="M10 5v5l3 2M10 18a8 8 0 100-16 8 8 0 000 16z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span id="extendLabel">Extend 48h</span>
+                </button>
+                <button class="btn transcript full" id="transcriptBtn">
+                    <svg viewBox="0 0 20 20" fill="none"><path d="M5 6h10M5 10h10M5 14h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="16.5" cy="14" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
+                    <span id="transcriptLabel">Generate transcript</span>
+                </button>
+            </div>
+            <div class="transcript-panel" id="transcriptPanel">
+                <div class="transcript-head">
+                    <h3 id="transcriptHead">Transcript</h3>
+                    <div class="links" id="transcriptLinks" hidden>
+                        <a id="transcriptSrt" download>SRT</a>
+                        <a id="transcriptVtt" download>VTT</a>
+                    </div>
+                </div>
+                <div id="transcriptBody"></div>
+            </div>
+        </div>
+
+        <p class="hint">
+            Shared link auto-expires unless extended. Up to 30 days from creation.
+            <a href="/">Try it yourself.</a>
+        </p>
+    </main>
+    <div class="toast" id="toast">Copied</div>
+
+    <script>
+    (function() {
+        const $ = (s) => document.querySelector(s);
+        const m = location.pathname.match(/^\/v\/([a-z0-9]{4,16})\/?$/);
+        const id = m && m[1];
+        const content = $('#content');
+        const toast = $('#toast');
+
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(showToast._t);
+            showToast._t = setTimeout(() => toast.classList.remove('show'), 1800);
+        }
+
+        function showError(title, body) {
+            content.innerHTML = `<div class="error"><h2>${title}</h2><p>${body}</p></div>`;
+        }
+
+        function fmtBytes(n) {
+            if (!n) return '';
+            const u = ['B', 'KB', 'MB', 'GB'];
+            let i = 0;
+            while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+            return `${n.toFixed(n >= 100 ? 0 : 1)} ${u[i]}`;
+        }
+
+        function fmtExpires(expiresAtSec) {
+            const ms = expiresAtSec * 1000 - Date.now();
+            if (ms <= 0) return 'expired';
+            const h = Math.floor(ms / 3600000);
+            const min = Math.floor((ms % 3600000) / 60000);
+            if (h > 0) return `${h}h ${min}m`;
+            return `${min}m`;
+        }
+
+        if (!id) {
+            showError('Invalid link', 'This share URL is missing an id.');
+            return;
+        }
+
+        async function init() {
+            let meta;
+            try {
+                const r = await fetch(`/api/share/${id}`);
+                if (r.status === 410) return showError('Expired', 'This share link expired (links live for 48 hours).');
+                if (r.status === 404) return showError('Not found', "We couldn't find this share — it may have expired or never existed.");
+                if (!r.ok) return showError('Couldn\'t load', `Server returned ${r.status}.`);
+                meta = await r.json();
+            } catch (e) {
+                return showError('Couldn\'t load', 'Network error fetching share metadata.');
+            }
+
+            const fileUrl = meta.url || `/api/share/${id}/${encodeURIComponent(meta.filename)}`;
+            const isVideo = (meta.mime || '').startsWith('video/');
+
+            $('#loading').remove();
+            const player = document.querySelector('.player');
+            if (isVideo) {
+                const v = document.createElement('video');
+                v.controls = true;
+                v.playsInline = true;
+                v.preload = 'metadata';
+                v.src = fileUrl;
+                player.appendChild(v);
+            } else {
+                player.innerHTML = `<div class="empty">Audio file — use the download button below.</div>`;
+            }
+
+            // ----- expiry / extend state -----
+            const state = {
+                expiresAt: meta.expires_at || 0,
+                createdAt: meta.created_at || 0,
+                maxAgeRemaining: meta.max_age_remaining ?? null,
+                extendable: meta.extendable !== false,
+            };
+
+            function renderMeta() {
+                const remaining = fmtExpires(state.expiresAt);
+                $('#meta').innerHTML = [
+                    meta.filename ? `<span><strong>${meta.filename}</strong></span>` : '',
+                    meta.size ? `<span>${fmtBytes(meta.size)}</span>` : '',
+                    state.expiresAt ? `<span id="metaExpires">expires in ${remaining}</span>` : '',
+                ].filter(Boolean).join('');
+                $('#expiresIn').textContent = remaining || '48h';
+            }
+            renderMeta();
+
+            // Tick the displayed countdown each minute so it's not stale.
+            setInterval(renderMeta, 60_000);
+
+            const dl = $('#downloadBtn');
+            dl.href = fileUrl;
+            dl.setAttribute('download', meta.filename || 'video.mp4');
+
+            const audio = $('#audioBtn');
+            audio.href = `/api/share/${id}/extract-audio`;
+
+            // Trim/Compress hand off to the main app
+            $('#trimBtn').href = `/?share=${encodeURIComponent(id)}&action=trim`;
+            $('#compressBtn').href = `/?share=${encodeURIComponent(id)}&action=compress`;
+
+            // Hide audio for non-video shares
+            if (!isVideo) audio.style.display = 'none';
+
+            $('#copyBtn').addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    $('#copyLabel').textContent = 'Copied!';
+                    showToast('Link copied');
+                } catch (_) {
+                    showToast('Copy failed');
+                }
+                setTimeout(() => { $('#copyLabel').textContent = 'Copy link'; }, 2000);
+            });
+
+            if (navigator.share) {
+                $('#copyBtn').addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    navigator.share({ url: window.location.href }).catch(() => {});
+                });
+            }
+
+            // ----- extend button -----
+            const extendBtn = $('#extendBtn');
+            const extendLabel = $('#extendLabel');
+
+            function fmtMaxRemaining(secs) {
+                if (secs <= 0) return 'cap reached';
+                const d = Math.floor(secs / 86400);
+                const h = Math.floor((secs % 86400) / 3600);
+                if (d > 0) return `${d}d left`;
+                return `${h}h left`;
+            }
+
+            function refreshExtendButton() {
+                if (!state.extendable || (state.maxAgeRemaining !== null && state.maxAgeRemaining <= 0)) {
+                    extendBtn.classList.add('maxed');
+                    extendBtn.disabled = true;
+                    extendLabel.textContent = '30-day cap reached';
+                    return;
+                }
+                extendBtn.classList.remove('maxed');
+                extendBtn.disabled = false;
+                const cap = state.maxAgeRemaining !== null
+                    ? ` · ${fmtMaxRemaining(state.maxAgeRemaining)}`
+                    : '';
+                extendLabel.textContent = `Extend 48h${cap}`;
+            }
+            refreshExtendButton();
+
+            extendBtn.addEventListener('click', async () => {
+                if (extendBtn.disabled) return;
+                extendBtn.disabled = true;
+                extendLabel.textContent = 'Extending…';
+                try {
+                    const r = await fetch(`/api/share/${id}/extend`, { method: 'POST' });
+                    if (r.status === 403) {
+                        const j = await r.json().catch(() => ({}));
+                        state.extendable = false;
+                        state.maxAgeRemaining = 0;
+                        refreshExtendButton();
+                        showToast(j.detail || '30-day cap reached');
+                        return;
+                    }
+                    if (!r.ok) {
+                        const j = await r.json().catch(() => ({}));
+                        showToast(j.detail || `Extend failed (${r.status})`);
+                        refreshExtendButton();
+                        return;
+                    }
+                    const data = await r.json();
+                    state.expiresAt = data.expires_at;
+                    state.maxAgeRemaining = data.max_age_remaining;
+                    state.extendable = data.extendable !== false && data.max_age_remaining > 0;
+                    renderMeta();
+                    refreshExtendButton();
+                    showToast('Reset to 48h');
+                } catch (_) {
+                    showToast('Network error');
+                    refreshExtendButton();
+                }
+            });
+
+            // ----- transcript -----
+            const transcriptBtn = $('#transcriptBtn');
+            const transcriptLabel = $('#transcriptLabel');
+            const transcriptPanel = $('#transcriptPanel');
+            const transcriptBody = $('#transcriptBody');
+            const transcriptHead = $('#transcriptHead');
+            const transcriptLinks = $('#transcriptLinks');
+            let transcriptPolling = null;
+
+            function fmtClock(t) {
+                const m = Math.floor(t / 60);
+                const s = Math.floor(t % 60);
+                return `${m}:${s.toString().padStart(2, '0')}`;
+            }
+
+            function renderTranscript(data) {
+                transcriptHead.textContent = `Transcript${data.language ? ` · ${data.language}` : ''}`;
+                $('#transcriptSrt').href = `/api/share/${id}/transcript.srt`;
+                $('#transcriptVtt').href = `/api/share/${id}/transcript.vtt`;
+                transcriptLinks.hidden = false;
+
+                const segs = data.segments || [];
+                if (!segs.length) {
+                    transcriptBody.innerHTML = `<p class="transcript-status">No speech detected.</p>`;
+                    return;
+                }
+
+                transcriptBody.innerHTML = `<div class="transcript-segments">${
+                    segs.map((s, i) => `
+                        <div class="transcript-seg" data-t="${s.start}" data-i="${i}">
+                            <time>${fmtClock(s.start)}</time>
+                            <p>${s.text.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p>
+                        </div>`).join('')
+                }</div>`;
+
+                transcriptBody.querySelectorAll('.transcript-seg').forEach(el => {
+                    el.addEventListener('click', () => {
+                        const t = parseFloat(el.dataset.t);
+                        const v = document.querySelector('.player video');
+                        if (v) {
+                            v.currentTime = t;
+                            v.play().catch(() => {});
+                        }
+                    });
+                });
+
+                transcriptLabel.textContent = 'Transcript ready';
+                transcriptBtn.disabled = false;
+            }
+
+            async function pollTranscript() {
+                try {
+                    const r = await fetch(`/api/share/${id}/transcript`);
+                    if (r.ok) {
+                        const data = await r.json();
+                        clearInterval(transcriptPolling);
+                        transcriptPolling = null;
+                        renderTranscript(data);
+                        return;
+                    }
+                    if (r.status === 202) {
+                        const j = await r.json();
+                        transcriptLabel.innerHTML = `<span class="spinner"></span>Transcribing… ${j.elapsed_seconds}s`;
+                        return;
+                    }
+                    if (r.status === 500) {
+                        const j = await r.json().catch(() => ({}));
+                        clearInterval(transcriptPolling);
+                        transcriptPolling = null;
+                        transcriptBody.innerHTML = `<p class="transcript-status">Transcription failed: ${(j.detail || 'unknown error').slice(0, 200)}</p>`;
+                        transcriptLabel.textContent = 'Retry transcript';
+                        transcriptBtn.disabled = false;
+                        return;
+                    }
+                } catch (_) {
+                    /* keep polling */
+                }
+            }
+
+            transcriptBtn.addEventListener('click', async () => {
+                if (transcriptBtn.disabled) return;
+
+                // If panel is hidden but transcript already exists, just toggle visible
+                if (transcriptPanel.classList.contains('show') && transcriptBody.querySelector('.transcript-segments')) {
+                    transcriptPanel.classList.remove('show');
+                    return;
+                }
+
+                transcriptPanel.classList.add('show');
+                if (transcriptBody.querySelector('.transcript-segments')) return; // already loaded
+
+                transcriptBtn.disabled = true;
+                transcriptLabel.innerHTML = `<span class="spinner"></span>Starting…`;
+                transcriptBody.innerHTML = `<p class="transcript-status"><span class="spinner"></span>Extracting audio + running Whisper. This typically takes about as long as the clip itself.</p>`;
+
+                try {
+                    const r = await fetch(`/api/share/${id}/transcript`, { method: 'POST' });
+                    if (!r.ok) {
+                        const j = await r.json().catch(() => ({}));
+                        throw new Error(j.detail || `HTTP ${r.status}`);
+                    }
+                    const start = await r.json();
+                    if (start.state === 'done') {
+                        // Cached — fetch immediately
+                        await pollTranscript();
+                        return;
+                    }
+                    transcriptPolling = setInterval(pollTranscript, 3000);
+                    pollTranscript();
+                } catch (e) {
+                    transcriptBody.innerHTML = `<p class="transcript-status">Failed to start: ${e.message}</p>`;
+                    transcriptLabel.textContent = 'Retry transcript';
+                    transcriptBtn.disabled = false;
+                }
+            });
+
+            // If transcript was generated previously, fetch & render eagerly
+            (async () => {
+                try {
+                    const r = await fetch(`/api/share/${id}/transcript`);
+                    if (r.ok) {
+                        const data = await r.json();
+                        transcriptPanel.classList.add('show');
+                        renderTranscript(data);
+                    }
+                } catch (_) { /* no-op */ }
+            })();
+
+            $('#actions').hidden = false;
+        }
+
+        init();
+    })();
+    </script>
+</body>
+</html>
