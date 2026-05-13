@@ -1,4 +1,4 @@
-const CACHE_NAME = 'compress-v23';
+const CACHE_NAME = 'compress-v24';
 const SHARE_PROBE_CACHE = 'share-probe-v1';
 
 // Large files that rarely change — cache-first (avoid re-downloading 31MB WASM)
@@ -52,13 +52,19 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     if (url.origin !== self.location.origin) return;
 
-    // Handle share target: POST to / with shared video/image file
+    // Handle share target: POST to / with shared media file
     if (event.request.method === 'POST' && url.pathname === '/') {
         event.respondWith(
             (async () => {
                 const formData = await event.request.formData();
-                const videoFile = formData.get('video');
-                const imageFile = formData.get('image');
+                // Manifest now uses a single 'media' field, but old WebAPKs
+                // minted from the previous manifest version still POST 'video'
+                // or 'image' — accept all three so an unrefreshed WebAPK keeps
+                // working until the next WebAPK rebuild lands.
+                const file = formData.get('media') || formData.get('image') || formData.get('video');
+                const isImage = !!file && (file.type || '').startsWith('image/');
+                const videoFile = !isImage ? file : null;
+                const imageFile = isImage ? file : null;
 
                 // Image branch: stash in cache, redirect to probe page
                 // (probe phase — we want to inspect what Google Photos actually

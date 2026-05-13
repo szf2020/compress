@@ -50,12 +50,8 @@
         "params": {
             "files": [
                 {
-                    "name": "video",
-                    "accept": ["video/*"]
-                },
-                {
-                    "name": "image",
-                    "accept": ["image/*"]
+                    "name": "media",
+                    "accept": ["video/*", "image/*"]
                 }
             ]
         }
