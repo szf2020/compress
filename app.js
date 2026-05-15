@@ -381,7 +381,7 @@ urlDom.shareBtn.addEventListener('click', async () => {
         }
 
         if (navigator.vibrate) navigator.vibrate(10);
-        urlDom.shareHint.textContent = `Link expires in 48 hours • ${fullUrl}`;
+        urlDom.shareHint.textContent = `Link expires in 7 days • ${fullUrl}`;
     } catch (err) {
         urlDom.shareLabel.textContent = 'Failed';
         urlDom.shareHint.textContent = err.message || 'Could not create share link.';
@@ -1166,7 +1166,7 @@ dom.shareLinkBtn.addEventListener('click', async () => {
         }
 
         if (navigator.vibrate) navigator.vibrate(10);
-        dom.shareHint.textContent = 'Link expires in 48 hours.';
+        dom.shareHint.textContent = 'Link expires in 7 days.';
     } catch (err) {
         dom.shareLinkLabel.textContent = 'Failed';
         dom.shareHint.textContent = err.message || 'Could not create share link.';

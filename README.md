@@ -22,7 +22,7 @@ A video compression PWA built on FFmpeg compiled to WebAssembly. The compression
 | **Trim** | Cut a clip to a start/end range before encoding. Stream copy when possible (fast, no quality loss). |
 | **Audio-only** | Strip the video, save the audio as MP3 (128 kbps). Useful for podcasts, voice memos. |
 | **Paste a link** | Drop in a TikTok / YouTube / Instagram / X (Twitter) URL. Server fetches with yt-dlp, browser handles compression. |
-| **Share for 48h** | Optionally save the result to a temporary share URL. Auto-previews in iMessage / Discord / Slack via OG tags. Expires after 48 hours. |
+| **Share for 7 days** | Optionally save the result to a temporary share URL. Auto-previews in iMessage / Discord / Slack via OG tags. Expires after 7 days. |
 | **Resume** | If you navigate away mid-session, the loaded video is held in memory — `Continue` button reopens it. |
 
 ## Quality presets
@@ -46,7 +46,7 @@ Be specific about what hits the network and what doesn't:
 |---|---|
 | Upload a file from your device | **No.** The video is read into memory and processed by FFmpeg.wasm in the page. Zero bytes leave the browser. |
 | Paste a link | **Yes.** A small backend (yt-dlp on `mat`) downloads the video and serves it back to the browser. The browser then compresses locally. The server keeps the file ~5 minutes. |
-| Click "Share" on a result | **Yes.** Uploads the compressed output to a 48-hour share URL with OG-tagged thumbnail. Optional — never automatic. |
+| Click "Share" on a result | **Yes.** Uploads the compressed output to a 7-day share URL with OG-tagged thumbnail. Optional — never automatic. |
 | Idle on the page | **No.** No analytics, no tracking, no telemetry, no cookies (only the service-worker cache). |
 
 The FFmpeg `.wasm` bundle is the only resource pulled at first load; after that the service worker serves it cache-first.

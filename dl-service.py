@@ -26,7 +26,7 @@ SHARE_DIR = Path("/opt/compress-dl/shares")
 SHARE_DIR.mkdir(exist_ok=True)
 
 CLEANUP_AGE = 1800  # 30 minutes for /downloads
-SHARE_TTL = 48 * 3600  # 48 hours sliding window (resets on extend)
+SHARE_TTL = 7 * 24 * 3600  # 7 days sliding window (resets on extend)
 SHARE_MAX_AGE = 30 * 24 * 3600  # absolute 30-day cap from share creation
 SHARE_MAX_BYTES = 200 * 1024 * 1024  # 200 MB per share
 SHARE_TOTAL_CAP = 5 * 1024 * 1024 * 1024  # 5 GB rolling cap across shares
@@ -616,7 +616,7 @@ async def health():
 
 
 # ============================================
-# Share: 48h ephemeral hosting with rolling cap
+# Share: 7-day ephemeral hosting with rolling cap
 # ============================================
 SHARE_ID_ALPHABET = "abcdefghijkmnopqrstuvwxyz23456789"  # no 0/1/l confusables
 
@@ -641,7 +641,7 @@ class PromoteShareRequest(BaseModel):
 
 @app.post("/share/promote")
 async def promote_to_share(req: PromoteShareRequest):
-    """Take an existing /downloads file and copy it into /shares with a 48h TTL."""
+    """Take an existing /downloads file and copy it into /shares with a 7-day TTL."""
     if not re.fullmatch(r"[a-fA-F0-9\-]{4,40}", req.file_id):
         raise HTTPException(404, "Not found")
     src = DL_DIR / req.file_id / req.filename
@@ -690,7 +690,7 @@ async def promote_to_share(req: PromoteShareRequest):
 
 @app.post("/share")
 async def create_share(file: UploadFile):
-    """Store a file under /shares/<id>/ for 48h. Returns short-id + URL."""
+    """Store a file under /shares/<id>/ for 7 days. Returns short-id + URL."""
     safe_name = _safe_share_name(file.filename)
 
     # Pick a fresh id (avoid the rare collision)
@@ -862,7 +862,7 @@ async def get_share_meta(share_id: str):
 
 @app.post("/share/{share_id}/extend")
 async def extend_share(share_id: str):
-    """Reset the 48h sliding TTL. Capped at 30 days from share creation."""
+    """Reset the 7-day sliding TTL. Capped at 30 days from share creation."""
     f = _share_first_file(share_id)
     d = f.parent
     created = _share_created_at(d)
@@ -967,7 +967,7 @@ async def viewer_page(share_id: str):
     if w and h:
         desc_parts.append(f"{w}×{h}")
     desc_parts.append(f"{f.stat().st_size // (1024 * 1024)} MB")
-    desc_parts.append("expires in 48h")
+    desc_parts.append("expires in 7d")
     description = " · ".join(desc_parts)
 
     # Best-effort: ensure thumbnail exists so crawlers don't race.
@@ -1295,7 +1295,7 @@ def _enforce_share_cap():
 def _expire_old_shares():
     now = time.time()
     for mtime, size, d, files in _share_dirs_by_age():
-        # Sliding 48h window expired
+        # Sliding 7-day window expired
         if (now - mtime) > SHARE_TTL:
             _delete_share_dir(d, files)
             continue

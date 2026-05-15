@@ -198,7 +198,7 @@
             <div class="logo">C</div>
             <div class="brand">
                 <a href="/">compress.applesauce.chat</a>
-                <div class="sub">Shared video — expires in <span id="expiresIn">48h</span></div>
+                <div class="sub">Shared video — expires in <span id="expiresIn">7d</span></div>
             </div>
         </header>
 
@@ -230,7 +230,7 @@
                 </button>
                 <button class="btn extend" id="extendBtn" disabled>
                     <svg viewBox="0 0 20 20" fill="none"><path d="M10 5v5l3 2M10 18a8 8 0 100-16 8 8 0 000 16z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span id="extendLabel">Extend 48h</span>
+                    <span id="extendLabel">Extend 7 days</span>
                 </button>
                 <button class="btn transcript full" id="transcriptBtn">
                     <svg viewBox="0 0 20 20" fill="none"><path d="M5 6h10M5 10h10M5 14h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="16.5" cy="14" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
@@ -286,8 +286,10 @@
         function fmtExpires(expiresAtSec) {
             const ms = expiresAtSec * 1000 - Date.now();
             if (ms <= 0) return 'expired';
-            const h = Math.floor(ms / 3600000);
+            const d = Math.floor(ms / 86400000);
+            const h = Math.floor((ms % 86400000) / 3600000);
             const min = Math.floor((ms % 3600000) / 60000);
+            if (d > 0) return `${d}d ${h}h`;
             if (h > 0) return `${h}h ${min}m`;
             return `${min}m`;
         }
@@ -301,7 +303,7 @@
             let meta;
             try {
                 const r = await fetch(`/api/share/${id}`);
-                if (r.status === 410) return showError('Expired', 'This share link expired (links live for 48 hours).');
+                if (r.status === 410) return showError('Expired', 'This share link expired (links live for 7 days).');
                 if (r.status === 404) return showError('Not found', "We couldn't find this share — it may have expired or never existed.");
                 if (!r.ok) return showError('Couldn\'t load', `Server returned ${r.status}.`);
                 meta = await r.json();
@@ -340,7 +342,7 @@
                     meta.size ? `<span>${fmtBytes(meta.size)}</span>` : '',
                     state.expiresAt ? `<span id="metaExpires">expires in ${remaining}</span>` : '',
                 ].filter(Boolean).join('');
-                $('#expiresIn').textContent = remaining || '48h';
+                $('#expiresIn').textContent = remaining || '7d';
             }
             renderMeta();
 
@@ -403,7 +405,7 @@
                 const cap = state.maxAgeRemaining !== null
                     ? ` · ${fmtMaxRemaining(state.maxAgeRemaining)}`
                     : '';
-                extendLabel.textContent = `Extend 48h${cap}`;
+                extendLabel.textContent = `Extend 7 days${cap}`;
             }
             refreshExtendButton();
 
@@ -433,7 +435,7 @@
                     state.extendable = data.extendable !== false && data.max_age_remaining > 0;
                     renderMeta();
                     refreshExtendButton();
-                    showToast('Reset to 48h');
+                    showToast('Reset to 7 days');
                 } catch (_) {
                     showToast('Network error');
                     refreshExtendButton();

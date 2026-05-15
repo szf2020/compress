@@ -147,9 +147,12 @@
 
     <div id="content"></div>
 
-    <h2>Manual upload (desktop fallback)</h2>
-    <p class="lead">No share-sheet on desktop. Pick a file to run the same inspection.</p>
-    <input type="file" id="manualFile" accept="image/*,.heic,.heif">
+    <div class="card" id="picker">
+        <h2 style="margin-top:0">Pick a photo to inspect</h2>
+        <p class="lead" style="margin:0 0 12px">Works from anywhere — gallery, files, or share-sheet. On Android, the picker opens the same sources Google Photos would hand a share to. <strong>Use this if "Compress" isn't in your share sheet yet</strong> (WebAPK intent filters take time to refresh after a manifest update).</p>
+        <label for="manualFile" class="btn primary" style="background:var(--accent);border-color:var(--accent);color:#fff">📁 Choose a photo</label>
+        <input type="file" id="manualFile" accept="image/*,.heic,.heif" style="display:none">
+    </div>
 
     <p class="footer-note">compress.applesauce.chat / photos-probe v1</p>
 
