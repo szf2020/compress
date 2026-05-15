@@ -2019,3 +2019,17 @@ if ('serviceWorker' in navigator) {
 
 // Preload FFmpeg WASM immediately — don't wait for file selection
 loadFFmpeg();
+
+// Auto-trigger URL flow when launched via the share-target with a link
+// (TikTok / YouTube / IG / X → share → "Compress"). The SW extracts the
+// URL from the share intent and redirects here with ?url=<encoded>.
+(function consumeShareUrl() {
+    const sharedUrl = new URLSearchParams(location.search).get('url');
+    if (!sharedUrl) return;
+    if (!urlDom.input) return;
+    urlDom.input.value = sharedUrl;
+    // Strip the param from the address bar so a refresh doesn't re-trigger.
+    history.replaceState(null, '', location.pathname);
+    // Defer a tick so the rest of init has bound listeners + the button is wired.
+    setTimeout(() => startUrlDownload(), 0);
+})();

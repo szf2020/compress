@@ -1,4 +1,4 @@
-const CACHE_NAME = 'compress-v24';
+const CACHE_NAME = 'compress-v25';
 const SHARE_PROBE_CACHE = 'share-probe-v1';
 
 // Large files that rarely change — cache-first (avoid re-downloading 31MB WASM)
@@ -91,9 +91,22 @@ self.addEventListener('fetch', (event) => {
                 }
 
                 // Video branch: existing behaviour (postMessage to client)
-                const client = await self.clients.get(event.resultingClientId);
-                if (client && videoFile) {
-                    client.postMessage({ type: 'shared-video', file: videoFile });
+                if (videoFile) {
+                    const client = await self.clients.get(event.resultingClientId);
+                    if (client) client.postMessage({ type: 'shared-video', file: videoFile });
+                    return Response.redirect('/', 303);
+                }
+
+                // Link branch: no file, but TikTok/YouTube/IG/etc. share-sheet
+                // sent a URL via title/text/url params. Pull the first URL out
+                // and bounce home with ?url= so the page auto-fetches.
+                const title = formData.get('title') || '';
+                const text = formData.get('text') || '';
+                const urlParam = formData.get('url') || '';
+                const blob = [urlParam, text, title].filter(Boolean).join(' ');
+                const linkMatch = blob.match(/https?:\/\/[^\s<>"']+/);
+                if (linkMatch) {
+                    return Response.redirect('/?url=' + encodeURIComponent(linkMatch[0]), 303);
                 }
                 return Response.redirect('/', 303);
             })()
