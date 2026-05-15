@@ -2021,15 +2021,57 @@ if ('serviceWorker' in navigator) {
 loadFFmpeg();
 
 // Auto-trigger URL flow when launched via the share-target with a link
-// (TikTok / YouTube / IG / X → share → "Compress"). The SW extracts the
-// URL from the share intent and redirects here with ?url=<encoded>.
-(function consumeShareUrl() {
+// (TikTok / YouTube / YouTube Music / IG / X → share → "Compress"). The SW
+// extracts the URL from the share intent and redirects here with
+// ?url=<encoded>. We download via the right endpoint (audio for music,
+// video for everything else), then auto-promote the result to a 7-day
+// /v/<id> share link and surface it via navigator.share or clipboard.
+async function startUrlAudioShare(url) {
+    urlDom.input.disabled = true;
+    urlDom.actions.classList.add('hidden');
+    urlDom.status.classList.remove('hidden', 'done', 'error');
+    urlDom.statusText.textContent = 'Extracting audio…';
+    try {
+        const res = await fetch(`${DL_API}/download-audio`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || 'Audio extraction failed');
+        }
+        const data = await res.json();
+        urlDownloadInfo = { id: data.id, filename: data.filename };
+        urlDom.status.classList.add('done');
+        urlDom.statusText.textContent = `Ready — ${data.filename} (${formatBytes(data.size)})`;
+        urlDom.actions.classList.remove('hidden');
+        setHomeCompact(true);
+    } catch (err) {
+        urlDom.status.classList.add('error');
+        urlDom.statusText.textContent = err.message;
+    } finally {
+        urlDom.input.disabled = false;
+    }
+}
+
+(async function consumeShareUrl() {
     const sharedUrl = new URLSearchParams(location.search).get('url');
     if (!sharedUrl) return;
     if (!urlDom.input) return;
     urlDom.input.value = sharedUrl;
-    // Strip the param from the address bar so a refresh doesn't re-trigger.
     history.replaceState(null, '', location.pathname);
-    // Defer a tick so the rest of init has bound listeners + the button is wired.
-    setTimeout(() => startUrlDownload(), 0);
+
+    let host = '';
+    try { host = new URL(sharedUrl).hostname.toLowerCase(); } catch (_) {}
+    const isMusic = host === 'music.youtube.com' || host.endsWith('.music.youtube.com');
+
+    // Defer a tick so the rest of init has bound listeners + buttons are wired.
+    await new Promise((r) => setTimeout(r, 0));
+    await (isMusic ? startUrlAudioShare(sharedUrl) : startUrlDownload());
+
+    // If the download landed, auto-promote to a /v/ share link.
+    if (urlDownloadInfo && urlDom.shareBtn) {
+        urlDom.shareBtn.click();
+    }
 })();
